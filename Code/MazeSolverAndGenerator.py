@@ -10,6 +10,8 @@ class Maze:
         self.width = width
         self.height = height
         self.grid = self.create_grid(width, height)
+        # ~25% of cells are "mud" and cost 5 to enter; the rest cost 1
+        self.cost = [[random.choice([1, 1, 1, 5]) for _ in range(width)] for _ in range(height)]
         if mode == 0:
             self.generate_dfs()
         else:
@@ -118,6 +120,7 @@ class MazeSolver:
         self.grid = maze.grid
         self.height = maze.height
         self.width = maze.width
+        self.cost = maze.cost
         self.mode = mode
 
     def solve(self):
@@ -156,8 +159,9 @@ class MazeSolver:
             for dy, dx, wall in [(-1, 0, 0), (0, 1, 1), (1, 0, 2), (0, -1, 3)]:
                 ny, nx = y + dy, x + dx
                 if 0 <= ny < self.height and 0 <= nx < self.width and not self.grid[y][x][wall]:
-                    if dist[ny][nx] > dist[y][x] + 1:
-                        dist[ny][nx] = dist[y][x] + 1
+                    new_dist = dist[y][x] + self.cost[ny][nx]
+                    if dist[ny][nx] > new_dist:
+                        dist[ny][nx] = new_dist
                         parent[(ny, nx)] = (y, x)
                         heapq.heappush(heap, (dist[ny][nx], ny, nx))
         return []
@@ -237,6 +241,8 @@ class MazeApp:
                 y1 = y * self.cell_size
                 x2 = x1 + self.cell_size
                 y2 = y1 + self.cell_size
+                if self.maze.cost[y][x] > 1:
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill='#d9c7a3', outline='')
                 if cell[0]: self.canvas.create_line(x1, y1, x2, y1)
                 if cell[1]: self.canvas.create_line(x2, y1, x2, y2)
                 if cell[2]: self.canvas.create_line(x1, y2, x2, y2)
