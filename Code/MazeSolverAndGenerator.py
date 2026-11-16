@@ -205,9 +205,6 @@ class MazeApp:
         name = "DFS" if mode == 0 else "Prim's"
         self.info_label.config(text=f"Maze generated using {name} in {elapsed:.4f} seconds.")
 
-        self.button_dfs.pack_forget()
-        self.button_prim.pack_forget()
-
         self.solve_frame = tk.Frame(self.master)
         self.solve_frame.pack()
 
