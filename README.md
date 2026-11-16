@@ -1,5 +1,71 @@
 # Maze Generator and Solver
 
+A Tkinter app that generates a random grid maze and solves it with three shortest-path algorithms, so you can compare them on the same maze.
+Some cells are "mud" and cost more to cross, so the fewest-steps path and the cheapest path can differ.
+Each solve shows the path length, path cost, number of nodes explored, and running time.
+
+![A* solving a 30×30 Prim's maze](docs/screenshot.png)
+
+*A\* on a 30×30 Prim's maze (seed 2). Tan cells are mud (cost 5).*
+
+## How to run
+
+Requires Python 3 with Tkinter. No other packages.
+
+```
+python Code/MazeSolverAndGenerator.py
+```
+
+Click **Generate with DFS** or **Generate with Prim's**, then click any of the three solve buttons.
+Each new solve replaces the previous path.
+
+## Algorithms
+
+| Algorithm | Role | Line summary |
+|---|---|---|
+| Randomized DFS | Generator | Carves a random depth-first spanning tree; long, winding corridors. O(N). |
+| Randomized Prim's | Generator | Grows the maze from a random frontier of walls; many short dead ends. O(N). |
+| `add_loops(0.10)` | Post-processing | Removes 10% of remaining interior walls so several routes exist. |
+| BFS | Solver | Fewest steps; ignores cell cost. O(V + E). |
+| Dijkstra | Solver | Cheapest path using a min-heap. O(E log V). |
+| A* | Solver | Cheapest path, guided by Manhattan distance to the goal. O(E log V). |
+
+## Results
+
+Five 30×30 mazes per generator. Seeds are `random.seed(1)` to `random.seed(5)`, set just before generating.
+All three solvers ran on the same maze. Each cell shows **cost / length (cells) / nodes explored**.
+
+| Generator | Seed | BFS | Dijkstra | A* |
+|---|---|---|---|---|
+| DFS | 1 | 242 / 115 / 465 | 240 / 117 / 564 | 240 / 117 / 388 |
+| DFS | 2 | 158 / 71 / 868 | 128 / 73 / 838 | 128 / 73 / 642 |
+| DFS | 3 | 162 / 83 / 874 | 162 / 87 / 861 | 162 / 91 / 820 |
+| DFS | 4 | 156 / 77 / 899 | 136 / 77 / 895 | 136 / 77 / 841 |
+| DFS | 5 | 162 / 79 / 841 | 152 / 81 / 892 | 152 / 81 / 830 |
+| Prim's | 1 | 134 / 59 / 900 | 120 / 61 / 900 | 120 / 61 / 894 |
+| Prim's | 2 | 130 / 59 / 896 | 98 / 59 / 885 | 98 / 59 / 775 |
+| Prim's | 3 | 134 / 59 / 900 | 108 / 61 / 900 | 108 / 65 / 889 |
+| Prim's | 4 | 106 / 63 / 899 | 102 / 67 / 898 | 102 / 67 / 860 |
+| Prim's | 5 | 102 / 59 / 900 | 102 / 59 / 898 | 102 / 59 / 874 |
+
+Path cost is the sum of the costs of every cell entered after the start.
+"Nodes explored" counts cells taken off the queue or heap and expanded; stale heap entries are not counted.
+
+### Findings
+
+- **BFS finds the shortest path in steps, but not in cost.** BFS always has the smallest length.
+  In 8 of 10 mazes its path is more expensive than Dijkstra's (for example, 130 vs 98 on Prim's seed 2).
+- **Dijkstra finds the cheapest path.** It never loses on cost.
+- **A\* finds the same cost as Dijkstra and explores fewer nodes.** Its cost equals Dijkstra's in all 10 mazes.
+  It explored fewer nodes in all 10 mazes, by 0.7% to 31%. The path can differ when several paths share the cheapest cost (DFS seed 3, Prim's seed 3).
+- **The A\* savings are modest here.** The heuristic assumes each remaining step costs 1, but the average cell costs 2.
+  So the heuristic underestimates a lot, and A* behaves close to Dijkstra. Most runs still explore most of the 900 cells.
+- **BFS can explore fewer nodes than Dijkstra** (DFS seed 1: 465 vs 564). BFS stops as soon as it reaches the goal in the fewest steps,
+  while Dijkstra keeps expanding cheaper-so-far cells first.
+
+Correctness check: on 300 extra random mazes (sizes 2×2 to 25×25, both generators), every path was valid,
+BFS never had a longer path, Dijkstra and A* always had equal cost no higher than BFS, and A* never explored more nodes than Dijkstra.
+
 ## Report
 
 ### Code structure
