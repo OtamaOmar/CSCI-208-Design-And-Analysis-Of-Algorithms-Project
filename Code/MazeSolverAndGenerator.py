@@ -1,6 +1,7 @@
 import tkinter as tk
-import random
-import time
+import random, heapq
+from collections import deque
+from time import perf_counter
 
 random.seed()  # Ensures different maze every time the app launches
 
@@ -192,9 +193,9 @@ class MazeApp:
 
     def generate(self, mode):
         self.clear_canvas()
-        start_time = time.time()
+        start_time = perf_counter()
         self.maze = Maze(self.width, self.height, mode)
-        elapsed = time.time() - start_time
+        elapsed = perf_counter() - start_time
 
         self.draw_maze()
         self.info_label.config(text=f"Maze generated using {'DFS' if mode == 0 else 'Bellman-Ford'} in {elapsed:.4f} seconds.")
@@ -212,10 +213,10 @@ class MazeApp:
         self.button_dijkstra.pack(side=tk.LEFT)
 
     def solve(self, mode):
-        start_time = time.time()
+        start_time = perf_counter()
         solver = MazeSolver(self.maze, mode)
         path = solver.solve()
-        elapsed = time.time() - start_time
+        elapsed = perf_counter() - start_time
 
         if not path:
             self.info_label.config(text="No solution found!")
