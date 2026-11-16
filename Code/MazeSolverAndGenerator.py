@@ -217,7 +217,11 @@ class MazeApp:
         self.button_dijkstra = tk.Button(self.solve_frame, text="Solve with Dijkstra", command=lambda: self.solve(1))
         self.button_dijkstra.pack(side=tk.LEFT)
 
+        self.button_astar = tk.Button(self.solve_frame, text="Solve with A*", command=lambda: self.solve(2))
+        self.button_astar.pack(side=tk.LEFT)
+
     def solve(self, mode):
+        self.canvas.delete('path')
         start_time = perf_counter()
         solver = MazeSolver(self.maze, mode)
         path, explored = solver.solve()
@@ -227,10 +231,10 @@ class MazeApp:
             self.info_label.config(text="No solution found!")
         else:
             self.draw_path(path)
-            self.info_label.config(text=f"Solved using {'BFS' if mode == 0 else 'Dijkstra'} in {elapsed:.4f} seconds.")
-
-        self.button_bfs.pack_forget()
-        self.button_dijkstra.pack_forget()
+            name = ['BFS', 'Dijkstra', 'A*'][mode]
+            cost = sum(self.maze.cost[y][x] for y, x in path[1:])  # start cell is free
+            self.info_label.config(text=f"{name}: length {len(path)} cells, cost {cost}, "
+                                        f"explored {explored} nodes, time {elapsed:.4f} s")
 
     def draw_maze(self):
         for y in range(self.height):
@@ -252,7 +256,7 @@ class MazeApp:
             cx = x * self.cell_size + self.cell_size // 2
             cy = y * self.cell_size + self.cell_size // 2
             r = self.cell_size // 4
-            self.canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill='blue')
+            self.canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill='blue', tags='path')
 
     def clear_canvas(self):
         self.canvas.delete("all")
