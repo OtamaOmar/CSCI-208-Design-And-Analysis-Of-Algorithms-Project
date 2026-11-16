@@ -15,7 +15,8 @@ class Maze:
         if mode == 0:
             self.generate_dfs()
         else:
-            self.generate_bellman_ford()
+            self.generate_prim()
+        self.add_loops(0.10)
 
     def create_grid(self, width, height):
         return [[[True, True, True, True] for _ in range(width)] for _ in range(height)]
@@ -41,79 +42,41 @@ class Maze:
             else:
                 stack.pop()
 
-    def generate_bellman_ford(self):
-        dist = [[float('inf')] * self.width for _ in range(self.height)]
-        dist[0][0] = 0
+    def generate_prim(self):
+        dirs = [(-1, 0, 0, 2), (0, 1, 1, 3), (1, 0, 2, 0), (0, -1, 3, 1)]
         visited = {(0, 0)}
-        dirs = [(-1, 0, 0, 2), (0, 1, 1, 3), (1, 0, 2, 0), (0, -1, 3, 1)]
+        frontier = []  # walls (y, x, ny, nx, w1, w2) between a visited cell and a neighbor
 
-        cells = [(y, x) for y in range(self.height) for x in range(self.width)]
-        for _ in range(self.height * self.width):
-            random.shuffle(cells)
-            for y, x in cells:
-                if (y, x) not in visited:
-                    continue
-                neighbors = []
-                for dy, dx, w1, w2 in dirs:
-                    ny, nx = y + dy, x + dx
-                    if 0 <= ny < self.height and 0 <= nx < self.width and (ny, nx) not in visited:
-                        manhattan = abs(ny - (self.height - 1)) + abs(nx - (self.width - 1))
-                        neighbors.append((manhattan, ny, nx, w1, w2))
-                if neighbors:
-                    if random.random() < 0.5 and len(neighbors) > 1:
-                        _, ny, nx, w1, w2 = random.choice(neighbors)
-                    else:
-                        neighbors.sort()
-                        _, ny, nx, w1, w2 = neighbors[0]
-                    self.grid[y][x][w1] = False
-                    self.grid[ny][nx][w2] = False
-                    visited.add((ny, nx))
-                    dist[ny][nx] = dist[y][x] + 1
-
-        for y in range(self.height):
-            for x in range(self.width):
-                for dy, dx, w1, w2 in dirs:
-                    ny, nx = y + dy, x + dx
-                    if 0 <= ny < self.height and 0 <= nx < self.width and random.random() < 0.25:
-                        self.grid[y][x][w1] = False
-                        self.grid[ny][nx][w2] = False
-
-        self.ensure_path(dist)
-
-    def ensure_path(self, dist):
-        if dist[self.height - 1][self.width - 1] != float('inf'):
-            return
-
-        queue = [(self.height - 1, self.width - 1)]
-        parent = {}
-        visited = {(self.height - 1, self.width - 1)}
-        dirs = [(-1, 0, 0, 2), (0, 1, 1, 3), (1, 0, 2, 0), (0, -1, 3, 1)]
-
-        while queue:
-            y, x = queue.pop(0)
-            if dist[y][x] != float('inf'):
-                current = (y, x)
-                path = []
-                while current in parent:
-                    path.append(current)
-                    current = parent[current]
-                path.append(current)
-                path.reverse()
-                for i in range(len(path) - 1):
-                    cy, cx = path[i]
-                    ny, nx = path[i + 1]
-                    for dy, dx, w1, w2 in dirs:
-                        if cy + dy == ny and cx + dx == nx:
-                            self.grid[cy][cx][w1] = False
-                            self.grid[ny][nx][w2] = False
-                            dist[ny][nx] = dist[cy][cx] + 1
-                return
-            for dy, dx, _, _ in dirs:
+        def add_walls(y, x):
+            for dy, dx, w1, w2 in dirs:
                 ny, nx = y + dy, x + dx
                 if 0 <= ny < self.height and 0 <= nx < self.width and (ny, nx) not in visited:
-                    visited.add((ny, nx))
-                    parent[(ny, nx)] = (y, x)
-                    queue.append((ny, nx))
+                    frontier.append((y, x, ny, nx, w1, w2))
+
+        add_walls(0, 0)
+        while frontier:
+            # O(1) random removal: swap a random wall with the last one, then pop
+            i = random.randrange(len(frontier))
+            frontier[i], frontier[-1] = frontier[-1], frontier[i]
+            y, x, ny, nx, w1, w2 = frontier.pop()
+            if (ny, nx) in visited:
+                continue
+            self.grid[y][x][w1] = False
+            self.grid[ny][nx][w2] = False
+            visited.add((ny, nx))
+            add_walls(ny, nx)
+
+    def add_loops(self, chance):
+        # Remove some extra walls so there are several routes to the goal.
+        # Only right and down walls are checked, so each wall gets one chance.
+        for y in range(self.height):
+            for x in range(self.width):
+                if x + 1 < self.width and random.random() < chance:
+                    self.grid[y][x][1] = False
+                    self.grid[y][x + 1][3] = False
+                if y + 1 < self.height and random.random() < chance:
+                    self.grid[y][x][2] = False
+                    self.grid[y + 1][x][0] = False
 
 class MazeSolver:
     def __init__(self, maze, mode):
@@ -223,8 +186,8 @@ class MazeApp:
         self.button_dfs = tk.Button(self.button_frame, text="Generate with DFS", command=lambda: self.generate(0))
         self.button_dfs.pack(side=tk.LEFT)
 
-        self.button_bellman = tk.Button(self.button_frame, text="Generate with Bellman-Ford", command=lambda: self.generate(1))
-        self.button_bellman.pack(side=tk.LEFT)
+        self.button_prim = tk.Button(self.button_frame, text="Generate with Prim's", command=lambda: self.generate(1))
+        self.button_prim.pack(side=tk.LEFT)
 
     def generate(self, mode):
         self.clear_canvas()
@@ -233,10 +196,11 @@ class MazeApp:
         elapsed = perf_counter() - start_time
 
         self.draw_maze()
-        self.info_label.config(text=f"Maze generated using {'DFS' if mode == 0 else 'Bellman-Ford'} in {elapsed:.4f} seconds.")
+        name = "DFS" if mode == 0 else "Prim's"
+        self.info_label.config(text=f"Maze generated using {name} in {elapsed:.4f} seconds.")
 
         self.button_dfs.pack_forget()
-        self.button_bellman.pack_forget()
+        self.button_prim.pack_forget()
 
         self.solve_frame = tk.Frame(self.master)
         self.solve_frame.pack()
