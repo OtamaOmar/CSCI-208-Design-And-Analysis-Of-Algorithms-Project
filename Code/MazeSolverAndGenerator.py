@@ -148,7 +148,9 @@ class MazeSolver:
         heap = [(0, 0, 0)]
 
         while heap:
-            d, y, x = heap.pop(0)
+            d, y, x = heapq.heappop(heap)
+            if d > dist[y][x]:
+                continue  # stale entry, skip
             if (y, x) == (self.height - 1, self.width - 1):
                 return self.reconstruct_path(parent, (y, x))
             for dy, dx, wall in [(-1, 0, 0), (0, 1, 1), (1, 0, 2), (0, -1, 3)]:
@@ -157,7 +159,7 @@ class MazeSolver:
                     if dist[ny][nx] > dist[y][x] + 1:
                         dist[ny][nx] = dist[y][x] + 1
                         parent[(ny, nx)] = (y, x)
-                        heap.append((dist[ny][nx], ny, nx))
+                        heapq.heappush(heap, (dist[ny][nx], ny, nx))
         return []
 
     def reconstruct_path(self, parent, end):
