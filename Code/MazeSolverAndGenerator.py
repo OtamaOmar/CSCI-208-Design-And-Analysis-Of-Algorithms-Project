@@ -124,12 +124,12 @@ class MazeSolver:
         return self.bfs() if self.mode == 0 else self.dijkstra()
 
     def bfs(self):
-        queue = [(0, 0)]
+        queue = deque([(0, 0)])
         visited = {(0, 0)}
         parent = {}
 
         while queue:
-            y, x = queue.pop(0)
+            y, x = queue.popleft()
             if (y, x) == (self.height - 1, self.width - 1):
                 return self.reconstruct_path(parent, (y, x))
             for dy, dx, wall in [(-1, 0, 0), (0, 1, 1), (1, 0, 2), (0, -1, 3)]:
