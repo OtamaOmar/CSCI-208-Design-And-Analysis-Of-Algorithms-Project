@@ -124,7 +124,11 @@ class MazeSolver:
         self.mode = mode
 
     def solve(self):
-        return self.bfs() if self.mode == 0 else self.dijkstra()
+        if self.mode == 0:
+            return self.bfs()
+        if self.mode == 1:
+            return self.dijkstra()
+        return self.astar()
 
     def bfs(self):
         queue = deque([(0, 0)])
@@ -164,6 +168,31 @@ class MazeSolver:
                         dist[ny][nx] = new_dist
                         parent[(ny, nx)] = (y, x)
                         heapq.heappush(heap, (dist[ny][nx], ny, nx))
+        return []
+
+    def astar(self):
+        # Manhattan distance never overestimates because every cell costs at least 1,
+        # so A* still returns the cheapest path.
+        dist = [[float('inf')] * self.width for _ in range(self.height)]
+        dist[0][0] = 0
+        parent = {}
+        heap = [(0, 0, 0, 0)]  # (priority, real distance, y, x)
+
+        while heap:
+            _, d, y, x = heapq.heappop(heap)
+            if d > dist[y][x]:
+                continue  # stale entry, skip
+            if (y, x) == (self.height - 1, self.width - 1):
+                return self.reconstruct_path(parent, (y, x))
+            for dy, dx, wall in [(-1, 0, 0), (0, 1, 1), (1, 0, 2), (0, -1, 3)]:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < self.height and 0 <= nx < self.width and not self.grid[y][x][wall]:
+                    new_dist = dist[y][x] + self.cost[ny][nx]
+                    if dist[ny][nx] > new_dist:
+                        dist[ny][nx] = new_dist
+                        parent[(ny, nx)] = (y, x)
+                        h = abs(ny - (self.height - 1)) + abs(nx - (self.width - 1))
+                        heapq.heappush(heap, (dist[ny][nx] + h, dist[ny][nx], ny, nx))
         return []
 
     def reconstruct_path(self, parent, end):
